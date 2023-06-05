@@ -4,7 +4,7 @@ behaviors:
     hyperparameters:
       batch_size: 128
       buffer_size: 2048
-      learning_rate: 0.00003
+      learning_rate: 0.00001
       beta: 0.01
       epsilon: 0.2
       lambd: 0.95
@@ -18,15 +18,14 @@ behaviors:
     reward_signals:
       extrinsic:
         gamma: 0.85
-        strength: 1.0
+        strength: 2.0
       curiosity:
         gamma: 0.99
-        strength: 0.08
+        strength: 0.5
         network_settings:
           hidden_units: 32
         learning_rate: 0.0008
     keep_checkpoints: 5
-    even_checkpoints: true
     max_steps: 10000000
-    time_horizon: 128
-    summary_freq: 50000
+    time_horizon: 64
+    summary_freq: 20000

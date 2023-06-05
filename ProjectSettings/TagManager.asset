@@ -8,6 +8,7 @@ TagManager:
   - mazeWall
   - cellFloor
   - target
+  - environment
   layers:
   - Default
   - TransparentFX

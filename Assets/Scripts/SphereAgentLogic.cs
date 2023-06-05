@@ -9,6 +9,9 @@ using static UnityEngine.GraphicsBuffer;
 // [RequireComponent(typeof(MazeRenderer))]
 public class SphereAgentLogic : Agent {
 
+    private Vector3 previousCell;
+    private Vector3 targetCell;
+
     private Cell[,] maze = null;
     private int mazeWidth = 10;
     private int mazeHeight = 10;
@@ -50,10 +53,24 @@ public class SphereAgentLogic : Agent {
                                            0.5f,
                                            Mathf.RoundToInt(Random.value * (mazeHeight - 1) - mazeHeight / 2));
 
+         
+        // Megkeressuk az aktualis cella kozeppontjanak X koordinatajat
+        int X = Mathf.RoundToInt(this.transform.localPosition.x);
+        // Megkeressuk az aktualis cella kozeppontjanak Z koordinatajat
+        int Z = Mathf.RoundToInt(this.transform.localPosition.z);
+        this.previousCell = new Vector3(X, 1, Z);
+
+        
         // Move the target to a new spot
         Target.localPosition = new Vector3(Mathf.RoundToInt(Random.value * (mazeWidth - 1) - mazeWidth / 2),
                                            0.5f,
                                            Mathf.RoundToInt(Random.value * (mazeHeight - 1) - mazeHeight / 2));
+        // Megkeressuk az aktualis cella kozeppontjanak X koordinatajat
+        int x = Mathf.RoundToInt(Target.localPosition.x);
+        // Megkeressuk az aktualis cella kozeppontjanak Z koordinatajat
+        int z = Mathf.RoundToInt(Target.localPosition.z);
+        this.targetCell = new Vector3(x, 1, z);
+
 
         this.agentBody.angularVelocity = Vector3.zero;
         this.agentBody.velocity = Vector3.zero;
@@ -100,27 +117,56 @@ public class SphereAgentLogic : Agent {
         return tooClose;
     }
 
-    public float forceMultiplier = 2;
+    private bool ActualCellIsDeadEnd( WallState cellWalls ) {
+        if(cellWalls.HasFlag(WallState.UP) && cellWalls.HasFlag(WallState.RIGHT) && cellWalls.HasFlag(WallState.DOWN)
+            || cellWalls.HasFlag(WallState.RIGHT) && cellWalls.HasFlag(WallState.DOWN) && cellWalls.HasFlag(WallState.LEFT)
+            || cellWalls.HasFlag(WallState.DOWN) && cellWalls.HasFlag(WallState.LEFT) && cellWalls.HasFlag(WallState.UP)
+            || cellWalls.HasFlag(WallState.LEFT) && cellWalls.HasFlag(WallState.UP) && cellWalls.HasFlag(WallState.RIGHT)) 
+        {
+            return true;
+        }
+        return false;
+    }
+
+    public float forceMultiplier = 10;
     public override void OnActionReceived( ActionBuffers actions ) {
         // Negative reward due to shorter time to the goal is the better, don't waste time
         AddReward(-0.005f);
         // Actions, size = 2
-        int moveX = (int)actions.DiscreteActions[0];
-        int moveZ = (int)actions.DiscreteActions[1];
-
+        int dirNum = (int)actions.DiscreteActions[0];
+        Debug.Log(actions.DiscreteActions[0]);
         Vector3 moveDirection = Vector3.zero;
+        Vector3 aimedPos = Vector3.zero;
+        switch(dirNum) {
+            case 1:
+                moveDirection = new Vector3(0, 0, 0.1f);
+                break;
+            case 2:
+                moveDirection = new Vector3(0.1f, 0, 0);
+                break;
+            case 3:
+                moveDirection = new Vector3(0, 0, -0.1f);
+                break;
+            case 4:
+                moveDirection = new Vector3(-0.1f, 0, 0);
+                break;
+            default:
+                break;
+        }
+        aimedPos = this.transform.localPosition + moveDirection;
 
-        if(moveX == 0)
-            moveDirection += Vector3.right;
-        else if(moveX == 1)
-            moveDirection += Vector3.left;
-
-        if(moveZ == 0)
-            moveDirection += Vector3.forward;
-        else if(moveZ == 1)
-            moveDirection += Vector3.back;
-
-        agentBody.AddForce(moveDirection.normalized * forceMultiplier);
+        //agentBody.MovePosition(moveDirection.normalized);
+        RaycastHit hitWall;
+        if(Physics.Raycast(this.transform.position, moveDirection, out hitWall, 0.5f)) {
+            if(hitWall.collider.CompareTag("mazeWall")) {
+                // Ha falba akar lepni, akkor helyben marad es negativ jutalmat kap
+                AddReward(-0.1f);
+            } else {
+                this.transform.localPosition = aimedPos;
+            }
+        } else {
+            this.transform.localPosition = aimedPos;
+        }
 
         // Megkeressuk az aktualis cella kozeppontjanak X koordinatajat
         int X = Mathf.RoundToInt(this.transform.localPosition.x);
@@ -129,6 +175,16 @@ public class SphereAgentLogic : Agent {
         int Z = Mathf.RoundToInt(this.transform.localPosition.z);
         int j = Z + (mazeHeight / 2);
         Vector3 actualCell = new Vector3(X, 1, Z);
+
+        if(actualCell == previousCell) {
+            AddReward(-0.005f);
+        }
+
+        previousCell = actualCell;
+
+        if(maze[i, j].floor.GetComponent<Renderer>().material.color != Color.red){
+            AddReward(0.005f);
+        }
 
         maze[i, j].floor.GetComponent<Renderer>().material.color = Color.red;
         //Debug.Log(actualCell);
@@ -142,20 +198,45 @@ public class SphereAgentLogic : Agent {
 
 
         WallState actualCellState = maze[i, j].wallState;
-        if(WallIsTooClose(actualCellState)) {
+        if(ActualCellIsDeadEnd(actualCellState))
             AddReward(-0.1f);
+
+        if(WallIsTooClose(actualCellState)) {
+            AddReward(-0.0001f);
             //mazeRenderer.GetComponent<MazeRenderer>().Reset();
             //EndEpisode();
         }
 
+        float maxRaycastDistance = 10f;
+        if((actualCell-targetCell).magnitude < (previousCell - targetCell).magnitude) {
+            RaycastHit hit;
+            if(Physics.Raycast(this.transform.localPosition, targetCell - transform.position, out hit, maxRaycastDistance)) {
+                if(hit.collider.CompareTag("target")) {
+                    // Ha latja a targetet es arra is lepett magas jutalom (mar fel siker)
+                    AddReward(0.5f);
+                } else {
+                    // Ha nem latja a sugarakkal a target-et (akkor is kis jutalom, hogy minel kozelebb akarjon menni, de ne akadjon azert be emiatt)
+                    if(!Physics.Raycast(this.transform.localPosition, moveDirection, 0.75f)) {
+                        AddReward(0.2f);
+                    } else if(Physics.Raycast(this.transform.localPosition, moveDirection, out hit, 10f)) {
+                        if(hit.collider.CompareTag("cellFloor")) {
+                            // Ha latja a targetet es arra is lepett magas jutalom (mar fel siker)
+                            AddReward(0.2f);
+                        }
+                    }
+                }
+            }
+        }
 
+        if(StepCount == MaxStep) {
+            AddReward(-0.5f);
+            mazeRenderer.GetComponent<MazeRenderer>().Reset();
+            EndEpisode();
+        }
 
-
-        // Rewards
-        float distanceToTarget = Vector3.Distance(this.transform.localPosition, Target.localPosition);
 
         // Reached target
-        if(distanceToTarget < 0.5f) {
+        if(actualCell == this.targetCell) {
             AddReward(1.0f);
             mazeRenderer.GetComponent<MazeRenderer>().Reset();
             EndEpisode();
@@ -170,20 +251,19 @@ public class SphereAgentLogic : Agent {
 
     public override void Heuristic( in ActionBuffers actionsOut ) {
         var discreteActionsOut = actionsOut.DiscreteActions;
-
-        discreteActionsOut[0] = GetMoveAxis("Horizontal");
-        discreteActionsOut[1] = GetMoveAxis("Vertical");
-    }
-
-    private int GetMoveAxis( string axisName ) {
-        float input = Input.GetAxis(axisName);
-
-        if(input > 0)
-            return 0;
-        else if(input < 0)
-            return 1;
-        else
-            return -1;
+        discreteActionsOut[0] = 0;
+        if(Input.GetKey(KeyCode.UpArrow)) {
+            discreteActionsOut[0] = 1;
+        }
+        if(Input.GetKey(KeyCode.RightArrow)) {
+            discreteActionsOut[0] = 2;
+        }
+        if(Input.GetKey(KeyCode.DownArrow)) {
+            discreteActionsOut[0] = 3;
+        }
+        if(Input.GetKey(KeyCode.LeftArrow)) {
+            discreteActionsOut[0] = 4;
+        }
     }
 
 

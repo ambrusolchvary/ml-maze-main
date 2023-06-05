@@ -1,0 +1,56 @@
+{
+    "EscapeFromMaze": {
+        "checkpoints": [
+            {
+                "steps": 499999,
+                "file_path": "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-499999.onnx",
+                "reward": -32.469509856059,
+                "creation_time": 1685883800.2811875,
+                "auxillary_file_paths": [
+                    "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-499999.pt"
+                ]
+            },
+            {
+                "steps": 999885,
+                "file_path": "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-999885.onnx",
+                "reward": -52.8000550866127,
+                "creation_time": 1685889850.5228105,
+                "auxillary_file_paths": [
+                    "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-999885.pt"
+                ]
+            },
+            {
+                "steps": 1007218,
+                "file_path": "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-1007218.onnx",
+                "reward": -19.101022714376448,
+                "creation_time": 1685889943.4830341,
+                "auxillary_file_paths": [
+                    "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-1007218.pt"
+                ]
+            },
+            {
+                "steps": 1018087,
+                "file_path": "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-1018087.onnx",
+                "reward": -71.7545056939125,
+                "creation_time": 1685915228.331041,
+                "auxillary_file_paths": [
+                    "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-1018087.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 1018087,
+            "file_path": "results\\proba_02\\EscapeFromMaze.onnx",
+            "reward": -71.7545056939125,
+            "creation_time": 1685915228.331041,
+            "auxillary_file_paths": [
+                "results\\proba_02\\EscapeFromMaze\\EscapeFromMaze-1018087.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "2.0.1+cu118"
+    }
+}
